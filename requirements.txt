@@ -1,0 +1,12 @@
+langchain>=0.2.6
+langchain-community>=0.2.6
+fastapi>=0.112
+uvicorn[standard]>=0.30
+python-dotenv>=1.0
+faiss-cpu>=1.8
+sentence-transformers>=3.0
+atlassian-python-api>=3.41
+transformers>=4.43
+accelerate>=0.33
+azure-storage-blob>=12.21
+lxml=6.0.1

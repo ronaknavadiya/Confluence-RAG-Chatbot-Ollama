@@ -1,0 +1,5 @@
+.env
+confluence_env
+app/__pycache__
+utills/__pycache__
+data
