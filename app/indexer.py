@@ -2,6 +2,7 @@ from langchain_community.document_loaders import ConfluenceLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
+from azure.storage.blob import BlobServiceClient
 
 from .config import ensure_dir, env
 import os
@@ -24,7 +25,6 @@ def load_confluence_documents():
 
 
 #  indexing 
-
 def build_index(rebuild: bool = False):
 
     index_dir = ensure_dir(env("INDEX_DIR", "./data/index"))
@@ -56,13 +56,50 @@ def build_index(rebuild: bool = False):
     # create vector store
     vector_store = FAISS.from_documents(chunks, embeddings)
 
+    # Save to local
     vector_store.save_local(str(index_path))
+
+    # #  uploading to blob storage container
+    # upload_index_to_azure(index_path)
 
     return vector_store
 
 
 def get_vectorStore():
     return build_index(rebuild=False)
+
+
+def upload_index_to_azure(index_path):
+    conn_str = env("AZURE_STORAGE_CONNECTION_STRING")
+    container = env("AZURE_CONTAINER", "confluence-index")
+
+    if not conn_str:
+        print("Exiting... - connection string not defined")
+        return
+    
+    client = BlobServiceClient.from_connection_string(conn_str)
+    container_client = client.get_container_client(container)
+
+    container_client.upload_blob(
+        name="faiss_index",
+        data=open(index_path, "rb"),
+        overwrite=True
+    )
+
+
+
+def download_index_from_azure(index_path):
+    conn_str = env("AZURE_STORAGE_CONNECTION_STRING")
+    container = env("AZURE_CONTAINER", "confluence-index")
+    if not conn_str:
+        return
+    
+    client = BlobServiceClient.from_connection_string(conn_str)
+    container_client = client.get_container_client(container)
+    blob = container_client.get_blob_client("faiss_index")
+    if blob.exists():
+        with open(index_path, "wb") as f:
+            f.write(blob.download_blob().readall())
 
 # build_index()
 
