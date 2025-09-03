@@ -1,12 +1,32 @@
 version: '3.9'
+
 services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-container
+    ports:
+      - "11434:11434"         # expose Ollama API
+    volumes:
+      - ollama_data:/root/.ollama             # persist models so you don't re-download
+    restart: unless-stopped
+
   chatbot:
     build: .
-    container_name: confluence-rag-chatbot-ollama
+    container_name: confluence-rag-chatbot
+    depends_on:
+      - ollama
     ports:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434   # use service name, not localhost
     volumes:
       - ./data:/app/data
+      - ./data/index/faiss_index:/app/data/index/faiss_index
     restart: unless-stopped
+
+volumes:
+  ollama_data:
+
+
