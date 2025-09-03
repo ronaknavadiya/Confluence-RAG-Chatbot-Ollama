@@ -9,4 +9,4 @@ atlassian-python-api>=3.41
 transformers>=4.43
 accelerate>=0.33
 azure-storage-blob>=12.21
-lxml=6.0.1
+lxml
