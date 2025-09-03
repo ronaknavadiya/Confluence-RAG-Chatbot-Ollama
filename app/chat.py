@@ -41,13 +41,19 @@ def answer_question(question: str, k:int = None) -> dict:
     # llm
     llm = get_llm()
 
-    msgs = [
-        SystemMessage(content=SYSTEM_PROMPT + "\nContext:\n" + context),
-        HumanMessage(content=question),
-    ]
+    # If fallback HF pipeline called , we will send simplified prompt for better result
+    if getattr(llm, "_llm_type", "") == "hf-seq2seq":
+        prompt = f"Answer the question based only on the following context:\n\n{context}\n\nQuestion: {question}\nAnswer:"
+        text = llm(prompt)
 
-    # call method based on llm
-    resp = llm.invoke(msgs) if hasattr(llm, "invoke") else llm(messages=msgs)
-    text = resp.content if hasattr(resp, "content") else str(resp)
+    else:
+        msgs = [
+            SystemMessage(content=SYSTEM_PROMPT + "\nContext:\n" + context),
+            HumanMessage(content=question),
+        ]
+
+        # call method based on llm
+        resp = llm.invoke(msgs) if hasattr(llm, "invoke") else llm(messages=msgs)
+        text = resp.content if hasattr(resp, "content") else str(resp)
 
     return {"answer": text.strip(), "citations": [d.metadata for d in top_docs]}
