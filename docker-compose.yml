@@ -1,4 +1,3 @@
-version: '3.9'
 
 services:
   ollama:
@@ -25,6 +24,20 @@ services:
       - ./data:/app/data
       - ./data/index/faiss_index:/app/data/index/faiss_index
     restart: unless-stopped
+
+  frontend:
+    build: 
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: confluence-rag-ui
+    depends_on:
+      - chatbot
+    ports:
+      - "8501:8501"
+    environment:
+      - CHAT_API_URL=http://chatbot:8000/chat
+    restart: unless-stopped
+
 
 volumes:
   ollama_data:
