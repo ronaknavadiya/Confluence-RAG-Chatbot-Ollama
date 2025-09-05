@@ -12,7 +12,7 @@ VECTOR_STORE_PATH=./data/index/faiss_index
 OLLAMA_BASE_URL=http://localhost:11434  # when running ollama on local host 
 # OLLAMA_BASE_URL=http://ollama:11434   # when using docker-compose
 
-
+CHAT_API_URL=http://localhost:8000/chat
 
 # Azure
 AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=...

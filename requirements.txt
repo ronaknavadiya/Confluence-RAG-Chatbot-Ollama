@@ -10,3 +10,5 @@ transformers>=4.43
 accelerate>=0.33
 azure-storage-blob>=12.21
 lxml
+streamlit>=1.38
+requests>=2.31
