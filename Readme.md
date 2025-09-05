@@ -34,4 +34,4 @@ PORT=8000
         http://localhost:8000/docs
 
 
-![alt text](image.png)
+![Streamlit chatbot Demo](Demo/image.png)
