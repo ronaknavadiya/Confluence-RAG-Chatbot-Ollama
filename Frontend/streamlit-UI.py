@@ -24,6 +24,32 @@ top_k = st.sidebar.slider("Search from Top-K Documents", 1, 10, 3)
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
+if "thread_id" not in st.session_state:
+    st.session_state["thread_id"] = None
+
+
+# Sidebar for thread selection
+try:
+    thread_response = requests.get(os.getenv("CHAT_API_URL_THREADS","http://localhost:8000/threads"))
+    threads = thread_response.json() if thread_response.status_code == 200 else []
+except:
+    threads = []
+
+threads_name = ["New Thread"] + [t["name"] for t in threads]
+
+for name in threads_name:
+    if st.sidebar.button(name, type="secondary"):
+        if name != "New Thread":
+            st.session_state["thread_id"] = next((t["id"] for t in threads if t["name"] == name), None)
+            # call db and set messages
+            response = requests.get(f"http://localhost:8000/messages/{st.session_state['thread_id']}")
+            if response.status_code == 200:
+                messages = response.json()
+                st.session_state["messages"] = messages
+                # print(messages)
+        else:
+            st.session_state["thread_id"] = None
+
 
 #------------------------------- Render Chat History ----------------------------------#
 for msg in st.session_state["messages"]:
@@ -38,8 +64,6 @@ for msg in st.session_state["messages"]:
                     st.markdown(f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}")
 
 
-
-
 #------------------------------- Chat Input Box ----------------------------------#
 
 if user_input := st.chat_input("Ask a question about your Confluence docs..."):
@@ -50,7 +74,7 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
     # Call LLM using FastAPI
 
     try:
-        response = requests.post(API_URL, json={"question": user_input, "top_k": top_k})
+        response = requests.post(API_URL, json={"question": user_input, "top_k": top_k, "thread_id": st.session_state["thread_id"]})
         if response.status_code == 200:
             data = response.json()
             answer = data["answer"]
