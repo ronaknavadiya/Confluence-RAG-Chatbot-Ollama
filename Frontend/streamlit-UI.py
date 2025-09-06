@@ -74,26 +74,58 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
     # Call LLM using FastAPI
 
     try:
-        response = requests.post(API_URL, json={"question": user_input, "top_k": top_k, "thread_id": st.session_state["thread_id"]})
-        if response.status_code == 200:
-            data = response.json()
-            answer = data["answer"]
-            citations = data.get("citations",[])
+        
+        with requests.post(API_URL, json={"question": user_input, "top_k": top_k, "thread_id": st.session_state["thread_id"], "stream":True}, stream= True) as response:
+            if response.status_code != 200:
+                 st.error(f"API error {response.status_code}: {response.text}")
+            else:
+                # Create assistant chat bubble for streaming tokens
+                full_answer = st.chat_message("assistant").write_stream(response.iter_content(decode_unicode=True))
 
-            # save assistant response
-            st.session_state.messages.append(
-                {"role": "assistant", "content": answer, "citations": citations}
-            )
+                # print("Full Ansert ------------>" , full_answer)
+
+                 # Extract citations (they’re sent at the end with [CITATIONS] marker)
+                citations = []
+                if "[CITATIONS]" in full_answer:
+                    parts = full_answer.split("[CITATIONS]")
+                    full_answer = parts[0].strip()
+                    try:
+                        citations = eval(parts[1].strip())
+                    except Exception:
+                        citations = []
         
-            # Render assistant reply
-            st.chat_message("assistant").write(answer)
-            if citations:
-                with st.expander("Citations"):
-                    for i, citation in enumerate(data['citations'],1):
-                        st.markdown(f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}")
+                 # Save assistant message into session state
+                st.session_state["messages"].append(
+                    {"role": "assistant", "content": full_answer, "citations": citations}
+                )
+
+                # Render citations if available
+                if citations:
+                    with st.expander("Citations"):
+                        for i, citation in enumerate(citations, 1):
+                            st.markdown(
+                                f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}"
+                            )
+        # response = requests.post(API_URL, json={"question": user_input, "top_k": top_k, "thread_id": st.session_state["thread_id"], "stream":True})
+        # if response.status_code == 200:
+        #     data = response.json()
+        #     answer = data["answer"]
+        #     citations = data.get("citations",[])
+
+        #     # save assistant response
+        #     st.session_state.messages.append(
+        #         {"role": "assistant", "content": answer, "citations": citations}
+        #     )
         
-        else:
-            st.error(f"API error {response.status_code}: {response.text}")
+        #     # Render assistant reply
+        #     st.chat_message("assistant").write(answer)
+        #     if citations:
+        #         with st.expander("Citations"):
+        #             for i, citation in enumerate(data['citations'],1):
+        #                 st.markdown(f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}")
+        
+        # else:
+        #     st.error(f"API error {response.status_code}: {response.text}")
 
     except Exception as e:
         st.error(f"Request failed: {e}")

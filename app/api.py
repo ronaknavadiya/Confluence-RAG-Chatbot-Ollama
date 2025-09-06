@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from .chat import answer_question
 from .indexer import build_index
@@ -15,6 +16,7 @@ class ChatInput(BaseModel):
     question: str
     top_k:int | None = None
     thread_id: int | None = None
+    stream: bool = False
 
 class ChatOutput(BaseModel):
     answer: str
@@ -32,6 +34,7 @@ def chat_endpoint(payload: ChatInput):
             db.add(thread)
             db.commit()
             db.refresh(thread)
+            payload.thread_id = thread.id
         else:
             thread = db.query(Thread).filter(Thread.id == payload.thread_id).first()
             if not thread:
@@ -41,13 +44,37 @@ def chat_endpoint(payload: ChatInput):
         db.add(user_msg)
         db.commit()
 
-        result = answer_question(payload.question, payload.top_k)
+        #  Streaming response        
+        if payload.stream:
 
-        assistant_msg = Message(thread_id = thread.id, role="assistant", content= result["answer"], citations=result.get("citations", []))
-        db.add(assistant_msg)
-        db.commit()
+            def generate():
+                full_answer = ""
+                citations = []
+                for chunk in answer_question(payload.question, payload.top_k, payload.stream):
+                    
+                    if chunk.startswith("\n[CITATIONS]"):
+                        # print("citations in API --->"+ chunk)
+                        citations = eval(chunk.replace("\n[CITATIONS]", ""))
+                        continue
+                    full_answer +=chunk
+                    yield chunk
 
-        return {"answer": result["answer"], "citations": result.get("citations", []), "thread_id": thread.id}
+                # save assistant msg after streaming finishes
+                assistant_msg = Message(thread_id=payload.thread_id, role="assistant", content=full_answer, citations=citations)
+                db.add(assistant_msg)
+                db.commit()
+            
+            return StreamingResponse(generate(), media_type="text/plain")
+
+        else:
+            # without streaming
+            result = answer_question(payload.question, payload.top_k, payload.stream)
+
+            assistant_msg = Message(thread_id = thread.id, role="assistant", content= result["answer"], citations=result.get("citations", []))
+            db.add(assistant_msg)
+            db.commit()
+
+            return {"answer": result["answer"], "citations": result.get("citations", []), "thread_id": thread.id}
 
     finally:
         db.close()

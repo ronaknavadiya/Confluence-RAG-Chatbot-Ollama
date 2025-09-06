@@ -22,7 +22,7 @@ def format_context(docs):
         output.append(header + "\n" + doc.page_content.strip())
     return "\n\n".join(output)
 
-def answer_question(question: str, k:int = None) -> dict:
+def answer_question(question: str, k:int = None, stream:bool = False) -> dict:
     k = k or int(env("TOP_K", 3))
 
     vector_store = get_vectorStore()
@@ -45,6 +45,7 @@ def answer_question(question: str, k:int = None) -> dict:
     if getattr(llm, "_llm_type", "") == "hf-seq2seq":
         prompt = f"Answer the question based only on the following context:\n\n{context}\n\nQuestion: {question}\nAnswer:"
         text = llm(prompt)
+        return {"answer": text.strip(), "citations": [d.metadata for d in top_docs]}
 
     else:
         msgs = [
@@ -52,8 +53,20 @@ def answer_question(question: str, k:int = None) -> dict:
             HumanMessage(content=question),
         ]
 
-        # call method based on llm
-        resp = llm.invoke(msgs) if hasattr(llm, "invoke") else llm(messages=msgs)
-        text = resp.content if hasattr(resp, "content") else str(resp)
+        if stream:
+            def token_generator():
+                full_answer = ""
+                for chunk in llm.stream(msgs):
+                    token = getattr(chunk,"content", "")
+                    full_answer += token
+                    yield token # send partial output
+                # When streaming completes, also yield a marker with citations
+                yield f"\n[CITATIONS]{[d.metadata for d in top_docs]}"
 
-    return {"answer": text.strip(), "citations": [d.metadata for d in top_docs]}
+            return token_generator()
+        else:
+            # call method based on llm
+            resp = llm.invoke(msgs) if hasattr(llm, "invoke") else llm(messages=msgs)
+            text = resp.content if hasattr(resp, "content") else str(resp)
+
+            return {"answer": text.strip(), "citations": [d.metadata for d in top_docs]}
