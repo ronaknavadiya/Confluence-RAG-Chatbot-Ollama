@@ -17,7 +17,6 @@ class ChatInput(BaseModel):
     question: str
     top_k:int | None = None
     thread_id: int | None = None
-    stream: bool = False
 
 class ChatOutput(BaseModel):
     answer: str
@@ -30,7 +29,7 @@ def chat_endpoint(payload: ChatInput):
     db = SessionLocal()
 
     try:
-        if payload.thread_id in (None):
+        if payload.thread_id == None:
             thread = Thread(name="Thread_" + datetime.utcnow().isoformat())
             db.add(thread)
             db.commit()
@@ -45,48 +44,35 @@ def chat_endpoint(payload: ChatInput):
         db.add(user_msg)
         db.commit()
 
-        #  Streaming response        
-        if payload.stream:
+        def generate():
+            full_answer = ""
+            citations = []
+            for chunk in answer_question(payload.question, payload.top_k):
+                
+                if chunk["type"] == "token":
+                    full_answer += chunk["content"]
+                    # "\n" Separates each JSON message in the stream.
+                    # "\n" Ensures the client (iter_lines()) receives complete JSON objects.
+                    yield json.dumps(chunk) + "\n"
 
-            def generate():
-                full_answer = ""
-                citations = []
-                for chunk in answer_question(payload.question, payload.top_k, payload.stream):
-                    
-                    if chunk["type"] == "token":
-                        full_answer += chunk["content"]
-                        # "\n" Separates each JSON message in the stream.
-                        # "\n" Ensures the client (iter_lines()) receives complete JSON objects.
-                        yield json.dumps(chunk) + "\n"
-
-                    elif chunk["type"] == "citations":
-                        citations = chunk["citations"]
-                        yield json.dumps(chunk) + "\n"
+                elif chunk["type"] == "citations":
+                    citations = chunk["citations"]
+                    yield json.dumps(chunk) + "\n"
 
 
-                # save assistant msg after streaming finishes
-                assistant_msg = Message(thread_id=payload.thread_id, role="assistant", content=full_answer, citations=citations)
-                db.add(assistant_msg)
-                db.commit()
-
-                # yield final message with thread_id so frontend can capture it
-                final_info = {
-                    "type": "thread_info",
-                    "thread_id": payload.thread_id
-                }
-                yield json.dumps(final_info) + "\n"
-
-            return StreamingResponse(generate(), media_type="application/x-ndjson")
-
-        else:
-            # without streaming
-            result = answer_question(payload.question, payload.top_k, payload.stream)
-
-            assistant_msg = Message(thread_id = thread.id, role="assistant", content= result["answer"], citations=result.get("citations", []))
+            # save assistant msg after streaming finishes
+            assistant_msg = Message(thread_id=payload.thread_id, role="assistant", content=full_answer, citations=citations)
             db.add(assistant_msg)
             db.commit()
 
-            return {"answer": result["answer"], "citations": result.get("citations", []), "thread_id": thread.id}
+            # yield final message with thread_id so frontend can capture it
+            final_info = {
+                "type": "thread_info",
+                "thread_id": payload.thread_id
+            }
+            yield json.dumps(final_info) + "\n"
+
+        return StreamingResponse(generate(), media_type="application/x-ndjson")
 
     finally:
         db.close()
