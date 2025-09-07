@@ -30,7 +30,7 @@ def chat_endpoint(payload: ChatInput):
     db = SessionLocal()
 
     try:
-        if not payload.thread_id:
+        if payload.thread_id in (None):
             thread = Thread(name="Thread_" + datetime.utcnow().isoformat())
             db.add(thread)
             db.commit()
@@ -68,8 +68,15 @@ def chat_endpoint(payload: ChatInput):
                 assistant_msg = Message(thread_id=payload.thread_id, role="assistant", content=full_answer, citations=citations)
                 db.add(assistant_msg)
                 db.commit()
-            
-            return StreamingResponse(generate(), media_type="application/json")
+
+                # yield final message with thread_id so frontend can capture it
+                final_info = {
+                    "type": "thread_info",
+                    "thread_id": payload.thread_id
+                }
+                yield json.dumps(final_info) + "\n"
+
+            return StreamingResponse(generate(), media_type="application/x-ndjson")
 
         else:
             # without streaming
@@ -104,6 +111,22 @@ def extract_messages_from_thread_id(thread_id: int):
         return messages
     except Exception as e:
         return e.with_traceback()
+    finally:
+        db.close()
+
+@app.delete("/delete-thread/{thread_id}")
+def delete_thread_based_on_thread_id(thread_id:int):
+    db = SessionLocal()
+    try:
+        thread = db.query(Thread).filter(Thread.id == thread_id).first()
+        if not thread:
+            raise HTTPException(status_code=404, detail= "Thread not found")
+        
+        # delete all msg first 
+        db.query(Message).filter(Message.thread_id == thread_id).delete()
+        # delete thread form Thread table
+        db.delete(thread)
+        db.commit()
     finally:
         db.close()
 

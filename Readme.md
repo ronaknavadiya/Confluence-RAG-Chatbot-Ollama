@@ -29,4 +29,4 @@ setup .env file -> env_test.txt
 Demo ---> 
 
 
-![Streamlit chatbot Demo](Demo/Perplexity-like-ui.png)
+![Streamlit chatbot Demo](Demo/latest.png)
