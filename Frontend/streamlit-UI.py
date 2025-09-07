@@ -37,20 +37,53 @@ try:
 except:
     threads = []
 
-threads_name = ["New Thread"] + [t["name"] for t in threads]
+# threads_name = ["New Thread"] + [t["name"] for t in threads]
 
-for name in threads_name:
-    if st.sidebar.button(name, type="secondary"):
-        if name != "New Thread":
-            st.session_state["thread_id"] = next((t["id"] for t in threads if t["name"] == name), None)
-            # call db and set messages
-            response = requests.get(f"http://localhost:8000/messages/{st.session_state['thread_id']}")
-            if response.status_code == 200:
-                messages = response.json()
-                st.session_state["messages"] = messages
-                # print(messages)
-        else:
-            st.session_state["thread_id"] = None
+st.sidebar.subheader("Threads")
+
+for thread in threads:
+    col1,col2 = st.sidebar.columns([4,1])
+    with col1:
+        if col1.button(thread["name"], type="secondary"):
+            # if name != "New Thread":
+                st.session_state["thread_id"] = thread["id"]
+                # call db and set messages
+                response = requests.get(f"http://localhost:8000/messages/{st.session_state['thread_id']}")
+                if response.status_code == 200:
+                    messages = response.json()
+                    st.session_state["messages"] = messages
+                    # print(messages)
+            # else:
+            #     st.session_state["thread_id"] = None
+
+    with col2:
+        # if name != "New Thread":
+            # st.write(f"Thread id------------------>{st.session_state['thread_id']}")
+            if col2.button("🗑️", key=f"delete_{thread['id']}"):
+                try:
+                    response = requests.delete(f"http://localhost:8000/delete-thread/{thread['id']}")
+                    if response.status_code == 200:
+                        if st.session_state["thread_id"] == thread['id']:
+                            st.session_state["thread_id"] = None
+                            st.session_state["messages"] = []
+                        # toast notification
+                        st.toast(f"Deleted thread **{thread['name']}**", icon="🗑️")
+                        # refresh UI
+                        st.rerun()
+
+                    else:
+                        st.toast(f"❌ Error deleting {thread['name']}: {response.text}", icon="⚠️")
+                    
+                except Exception as e:
+                    print("Failed to delete thread :-" , traceback.print_exc())
+
+    # st.sidebar.button("Delete", type="secondary", key=f"Delete_{name}")
+
+#  Add New Thread
+if st.sidebar.button("➕ New Thread", type="primary", key="new_thread_btn"):
+    st.session_state["thread_id"] = None
+    st.session_state["messages"] = []
+    st.rerun()
 
 
 #------------------------------- Render Chat History ----------------------------------#
@@ -83,6 +116,7 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
             else:
                 # Create assistant chat bubble for streaming tokens
                 full_answer , citations = "", []
+                citations_rendered = False  # Flag to prevent duplicate rendering
 
                 with st.chat_message("assistant"):
                     msg_placeholder = st.empty()
@@ -96,7 +130,7 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
                         except:
                             continue
                         
-                        # print("DEBUG data:", data, type(data))
+                        # print("DEBUG data:", data)
 
                         if data["type"] == "token":
                             full_answer += data["content"]
@@ -104,9 +138,15 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
 
                         elif data["type"] == "citations":
                             citations = data["citations"]
-                            with citations_placeholder.expander("Citations"):
-                                for i, citation in enumerate(citations, 1):
-                                    st.markdown(f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}")
+                            if citations and not citations_rendered:
+                                with citations_placeholder.expander("Citations"):
+                                    for i, citation in enumerate(citations, 1):
+                                        st.markdown(f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}")
+                                citations_rendered = True
+
+                        elif data["type"] == "thread_info":
+                            print("DEBUG THREAD INFO --->",  data["thread_id"])
+                            st.session_state["thread_id"] = data["thread_id"]
 
                     msg_placeholder.markdown(full_answer)
         
