@@ -143,7 +143,6 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
                                 citations_rendered = True
 
                         elif data["type"] == "thread_info":
-                            print("DEBUG THREAD INFO --->",  data["thread_id"])
                             st.session_state["thread_id"] = data["thread_id"]
 
                     msg_placeholder.markdown(full_answer)
