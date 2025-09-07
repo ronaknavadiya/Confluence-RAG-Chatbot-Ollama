@@ -22,7 +22,7 @@ def format_context(docs):
         output.append(header + "\n" + doc.page_content.strip())
     return "\n\n".join(output)
 
-def answer_question(question: str, k:int = None, stream:bool = False) -> dict:
+def answer_question(question: str, k:int = None, stream:bool = True) -> dict:
     k = k or int(env("TOP_K", 3))
 
     vector_store = get_vectorStore()

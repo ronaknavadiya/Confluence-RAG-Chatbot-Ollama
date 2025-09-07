@@ -55,6 +55,8 @@ def chat_endpoint(payload: ChatInput):
                     
                     if chunk["type"] == "token":
                         full_answer += chunk["content"]
+                        # "\n" Separates each JSON message in the stream.
+                        # "\n" Ensures the client (iter_lines()) receives complete JSON objects.
                         yield json.dumps(chunk) + "\n"
 
                     elif chunk["type"] == "citations":
