@@ -96,7 +96,7 @@ def extract_messages_from_thread_id(thread_id: int):
         messages = db.query(Message).filter(Message.thread_id == thread_id).all()
         return messages
     except Exception as e:
-        return e.with_traceback()
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
 
