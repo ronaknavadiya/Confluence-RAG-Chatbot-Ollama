@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
 import os
+import json
+import traceback
 
 # --------------------  Global variables ---------------------------- #
 
@@ -74,38 +76,45 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
     # Call LLM using FastAPI
 
     try:
-        
-        with requests.post(API_URL, json={"question": user_input, "top_k": top_k, "thread_id": st.session_state["thread_id"], "stream":True}, stream= True) as response:
+        payload = {"question": user_input, "top_k": top_k, "thread_id": st.session_state["thread_id"], "stream":True}
+        with requests.post(API_URL, json= payload, stream= True) as response:
             if response.status_code != 200:
                  st.error(f"API error {response.status_code}: {response.text}")
             else:
                 # Create assistant chat bubble for streaming tokens
-                full_answer = st.chat_message("assistant").write_stream(response.iter_content(decode_unicode=True))
+                full_answer , citations = "", []
 
-                # print("Full Ansert ------------>" , full_answer)
+                with st.chat_message("assistant"):
+                    msg_placeholder = st.empty()
+                    citations_placeholder = st.empty()
 
-                 # Extract citations (they’re sent at the end with [CITATIONS] marker)
-                citations = []
-                if "[CITATIONS]" in full_answer:
-                    parts = full_answer.split("[CITATIONS]")
-                    full_answer = parts[0].strip()
-                    try:
-                        citations = eval(parts[1].strip())
-                    except Exception:
-                        citations = []
+                    for line in response.iter_lines(decode_unicode=True):
+                        if not line:
+                            continue
+                        try:
+                            data = json.loads(line)
+                        except:
+                            continue
+                        
+                        print("DEBUG data:", data, type(data))
+
+                        if data["type"] == "token":
+                            full_answer += data["content"]
+                            msg_placeholder.markdown(full_answer + "▌")
+
+                        elif data["type"] == "citations":
+                            citations = data["citations"]
+                            with citations_placeholder.expander("Citations"):
+                                for i, citation in enumerate(citations, 1):
+                                    st.markdown(f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}")
+
+                    msg_placeholder.markdown(full_answer)
         
-                 # Save assistant message into session state
+                # Save assistant message into session state
                 st.session_state["messages"].append(
                     {"role": "assistant", "content": full_answer, "citations": citations}
                 )
 
-                # Render citations if available
-                if citations:
-                    with st.expander("Citations"):
-                        for i, citation in enumerate(citations, 1):
-                            st.markdown(
-                                f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}"
-                            )
         # response = requests.post(API_URL, json={"question": user_input, "top_k": top_k, "thread_id": st.session_state["thread_id"], "stream":True})
         # if response.status_code == 200:
         #     data = response.json()
@@ -128,4 +137,4 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
         #     st.error(f"API error {response.status_code}: {response.text}")
 
     except Exception as e:
-        st.error(f"Request failed: {e}")
+        st.error(f"Request failed: {traceback.format_exc()}")

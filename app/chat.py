@@ -59,9 +59,10 @@ def answer_question(question: str, k:int = None, stream:bool = False) -> dict:
                 for chunk in llm.stream(msgs):
                     token = getattr(chunk,"content", "")
                     full_answer += token
-                    yield token # send partial output
+                    yield {"type":"token", "content":token}
                 # When streaming completes, also yield a marker with citations
-                yield f"\n[CITATIONS]{[d.metadata for d in top_docs]}"
+                citations = [d.metadata for d in top_docs]
+                yield {"type": "citations", "citations": citations}
 
             return token_generator()
         else:

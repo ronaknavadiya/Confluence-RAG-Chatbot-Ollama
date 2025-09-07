@@ -5,6 +5,7 @@ from .chat import answer_question
 from .indexer import build_index
 from .database import SessionLocal, Thread, Message, init_db
 from datetime import datetime
+import json
 
 # Init App
 app = FastAPI(title="Confluence RAG Chatbot")
@@ -52,19 +53,21 @@ def chat_endpoint(payload: ChatInput):
                 citations = []
                 for chunk in answer_question(payload.question, payload.top_k, payload.stream):
                     
-                    if chunk.startswith("\n[CITATIONS]"):
-                        # print("citations in API --->"+ chunk)
-                        citations = eval(chunk.replace("\n[CITATIONS]", ""))
-                        continue
-                    full_answer +=chunk
-                    yield chunk
+                    if chunk["type"] == "token":
+                        full_answer += chunk["content"]
+                        yield json.dumps(chunk) + "\n"
+
+                    elif chunk["type"] == "citations":
+                        citations = chunk["citations"]
+                        yield json.dumps(chunk) + "\n"
+
 
                 # save assistant msg after streaming finishes
                 assistant_msg = Message(thread_id=payload.thread_id, role="assistant", content=full_answer, citations=citations)
                 db.add(assistant_msg)
                 db.commit()
             
-            return StreamingResponse(generate(), media_type="text/plain")
+            return StreamingResponse(generate(), media_type="application/json")
 
         else:
             # without streaming
