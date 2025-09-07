@@ -30,7 +30,7 @@ def chat_endpoint(payload: ChatInput):
     db = SessionLocal()
 
     try:
-        if payload.thread_id in (None):
+        if payload.thread_id == None:
             thread = Thread(name="Thread_" + datetime.utcnow().isoformat())
             db.add(thread)
             db.commit()
