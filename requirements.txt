@@ -11,3 +11,5 @@ accelerate>=0.33
 azure-storage-blob>=12.21
 lxml
 langchain-huggingface
+sqlalchemy 
+psycopg2-binary
