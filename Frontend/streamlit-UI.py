@@ -37,8 +37,6 @@ try:
 except:
     threads = []
 
-# threads_name = ["New Thread"] + [t["name"] for t in threads]
-
 st.sidebar.subheader("Threads")
 
 for thread in threads:
@@ -109,7 +107,7 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
     # Call LLM using FastAPI
 
     try:
-        payload = {"question": user_input, "top_k": top_k, "thread_id": st.session_state["thread_id"], "stream":True}
+        payload = {"question": user_input, "top_k": top_k, "thread_id": st.session_state["thread_id"]}
         with requests.post(API_URL, json= payload, stream= True) as response:
             if response.status_code != 200:
                  st.error(f"API error {response.status_code}: {response.text}")
@@ -154,27 +152,6 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
                 st.session_state["messages"].append(
                     {"role": "assistant", "content": full_answer, "citations": citations}
                 )
-
-        # response = requests.post(API_URL, json={"question": user_input, "top_k": top_k, "thread_id": st.session_state["thread_id"], "stream":True})
-        # if response.status_code == 200:
-        #     data = response.json()
-        #     answer = data["answer"]
-        #     citations = data.get("citations",[])
-
-        #     # save assistant response
-        #     st.session_state.messages.append(
-        #         {"role": "assistant", "content": answer, "citations": citations}
-        #     )
-        
-        #     # Render assistant reply
-        #     st.chat_message("assistant").write(answer)
-        #     if citations:
-        #         with st.expander("Citations"):
-        #             for i, citation in enumerate(data['citations'],1):
-        #                 st.markdown(f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}")
-        
-        # else:
-        #     st.error(f"API error {response.status_code}: {response.text}")
 
     except Exception as e:
         st.error(f"Request failed: {traceback.format_exc()}")
