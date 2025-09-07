@@ -96,7 +96,7 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
                         except:
                             continue
                         
-                        print("DEBUG data:", data, type(data))
+                        # print("DEBUG data:", data, type(data))
 
                         if data["type"] == "token":
                             full_answer += data["content"]
