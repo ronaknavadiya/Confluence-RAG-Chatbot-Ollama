@@ -5,116 +5,103 @@ import json
 import traceback
 
 # --------------------  Global variables ---------------------------- #
+API_URL_CHAT = os.getenv("CHAT_API_URL", "http://localhost:8000/chat")
+API_URL_THREADS = os.getenv("CHAT_API_URL_THREADS", "http://localhost:8000/threads")
+API_URL_MESSAGES = os.getenv("CHAT_API_URL_MESSAGES", "http://localhost:8000/messages")
+API_URL_DELETE_THREAD = os.getenv("CHAT_API_URL_DELETE_THREAD", "http://localhost:8000/delete-thread")
 
-API_URL = os.getenv("CHAT_API_URL", "http://localhost:8000/chat")
-
-
-#------------------------  Streamlit UI ------------------------------#
-
+# ------------------------  Streamlit UI ------------------------------ #
 st.set_page_config(page_title="Confluence RAG Chatbot", layout="wide")
-
 st.title("Confluence RAG Chatbot")
 st.markdown("Ask questions and get answers from your Confluence documentation.")
 
-# Sidebar for settings 
+# --------------------- Sidebar: Threads ---------------------------- #
 top_k = st.sidebar.slider("Search from Top-K Documents", 1, 10, 3)
 
-
-# --------------------------x---------------------------------x--------------------------------------x------------------------------------#
-# Initialize chat_history in session_state
-
+# Initialize session state
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
-
 if "thread_id" not in st.session_state:
     st.session_state["thread_id"] = None
 
+def fetch_threads():
+    try:
+        response = requests.get(API_URL_THREADS)
+        return response.json() if response.status_code == 200 else []
+    except:
+        return []
 
-# Sidebar for thread selection
-try:
-    thread_response = requests.get(os.getenv("CHAT_API_URL_THREADS","http://localhost:8000/threads"))
-    threads = thread_response.json() if thread_response.status_code == 200 else []
-except:
-    threads = []
+def fetch_thread_messages(thread_id):
+    try:
+        response = requests.get(f"{API_URL_MESSAGES}/{thread_id}")
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except:
+        return []
 
+threads = fetch_threads()
 st.sidebar.subheader("Threads")
 
 for thread in threads:
-    col1,col2 = st.sidebar.columns([4,1])
+    col1, col2 = st.sidebar.columns([4, 1])
+    
     with col1:
-        if col1.button(thread["name"], type="secondary"):
-            # if name != "New Thread":
-                st.session_state["thread_id"] = thread["id"]
-                # call db and set messages
-                response = requests.get(f"http://localhost:8000/messages/{st.session_state['thread_id']}")
-                if response.status_code == 200:
-                    messages = response.json()
-                    st.session_state["messages"] = messages
-                    # print(messages)
-            # else:
-            #     st.session_state["thread_id"] = None
+        if col1.button(thread["name"], key=f"select_{thread['id']}"):
+            st.session_state["thread_id"] = thread["id"]
+            st.session_state["messages"] = fetch_thread_messages(thread["id"])
 
     with col2:
-        # if name != "New Thread":
-            # st.write(f"Thread id------------------>{st.session_state['thread_id']}")
-            if col2.button("🗑️", key=f"delete_{thread['id']}"):
-                try:
-                    response = requests.delete(f"http://localhost:8000/delete-thread/{thread['id']}")
-                    if response.status_code == 200:
-                        if st.session_state["thread_id"] == thread['id']:
-                            st.session_state["thread_id"] = None
-                            st.session_state["messages"] = []
-                        # toast notification
-                        st.toast(f"Deleted thread **{thread['name']}**", icon="🗑️")
-                        # refresh UI
-                        st.rerun()
+        if col2.button("🗑️", key=f"delete_{thread['id']}"):
+            try:
+                response = requests.delete(f"{API_URL_DELETE_THREAD}/{thread['id']}")
+                if response.status_code == 200:
+                    # clear session if deleted thread was selected
+                    if st.session_state["thread_id"] == thread["id"]:
+                        st.session_state["thread_id"] = None
+                        st.session_state["messages"] = []
+                    st.toast(f"Deleted thread **{thread['name']}**", icon="🗑️")
+                    st.rerun()
+                else:
+                    st.toast(f"❌ Error deleting {thread['name']}: {response.text}", icon="⚠️")
+            except Exception:
+                st.error("Failed to delete thread:\n" + traceback.format_exc())
 
-                    else:
-                        st.toast(f"❌ Error deleting {thread['name']}: {response.text}", icon="⚠️")
-                    
-                except Exception as e:
-                    print("Failed to delete thread :-" , traceback.print_exc())
-
-    # st.sidebar.button("Delete", type="secondary", key=f"Delete_{name}")
-
-#  Add New Thread
-if st.sidebar.button("➕ New Thread", type="primary", key="new_thread_btn"):
+# Add New Thread
+if st.sidebar.button("➕ New Thread", key="new_thread_btn"):
     st.session_state["thread_id"] = None
     st.session_state["messages"] = []
     st.rerun()
 
-
-#------------------------------- Render Chat History ----------------------------------#
+# --------------------- Chat Area: History --------------------------- #
 for msg in st.session_state["messages"]:
     if msg["role"] == "user":
         st.chat_message("user").write(msg["content"])
     elif msg["role"] == "assistant":
         st.chat_message("assistant").write(msg["content"])
-        # citations
         if msg.get("citations"):
             with st.expander("Citations"):
-                for i, citation in enumerate(msg["citations"],1):
+                for i, citation in enumerate(msg["citations"], 1):
                     st.markdown(f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}")
 
-
-#------------------------------- Chat Input Box ----------------------------------#
-
+# --------------------- Chat Input & Streaming ----------------------- #
 if user_input := st.chat_input("Ask a question about your Confluence docs..."):
-    # save user msg in session state
-    st.session_state["messages"].append({"role":"user", "content": user_input})
+    st.session_state["messages"].append({"role": "user", "content": user_input})
     st.chat_message("user").write(user_input)
 
-    # Call LLM using FastAPI
+    payload = {
+        "question": user_input,
+        "top_k": top_k,
+        "thread_id": st.session_state["thread_id"]
+    }
 
     try:
-        payload = {"question": user_input, "top_k": top_k, "thread_id": st.session_state["thread_id"]}
-        with requests.post(API_URL, json= payload, stream= True) as response:
+        with requests.post(API_URL_CHAT, json=payload, stream=True) as response:
             if response.status_code != 200:
-                 st.error(f"API error {response.status_code}: {response.text}")
+                st.error(f"API error {response.status_code}: {response.text}")
             else:
-                # Create assistant chat bubble for streaming tokens
-                full_answer , citations = "", []
-                citations_rendered = False  # Flag to prevent duplicate rendering
+                full_answer, citations = "", []
+                citations_rendered = False
 
                 with st.chat_message("assistant"):
                     msg_placeholder = st.empty()
@@ -127,31 +114,27 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
                             data = json.loads(line)
                         except:
                             continue
-                        
-                        # print("DEBUG data:", data)
 
                         if data["type"] == "token":
                             full_answer += data["content"]
                             msg_placeholder.markdown(full_answer + "▌")
-
-                        elif data["type"] == "citations":
+                        elif data["type"] == "citations" and not citations_rendered:
                             citations = data["citations"]
-                            if citations and not citations_rendered:
+                            if citations:
                                 with citations_placeholder.expander("Citations"):
                                     for i, citation in enumerate(citations, 1):
                                         st.markdown(f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}")
                                 citations_rendered = True
-
                         elif data["type"] == "thread_info":
                             print("DEBUG THREAD INFO --->",  data["thread_id"])
                             st.session_state["thread_id"] = data["thread_id"]
 
                     msg_placeholder.markdown(full_answer)
-        
-                # Save assistant message into session state
-                st.session_state["messages"].append(
-                    {"role": "assistant", "content": full_answer, "citations": citations}
-                )
 
-    except Exception as e:
-        st.error(f"Request failed: {traceback.format_exc()}")
+                st.session_state["messages"].append({
+                    "role": "assistant",
+                    "content": full_answer,
+                    "citations": citations
+                })
+    except Exception:
+        st.error("Request failed:\n" + traceback.format_exc())
