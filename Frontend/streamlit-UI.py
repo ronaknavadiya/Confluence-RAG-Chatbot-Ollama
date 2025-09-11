@@ -123,7 +123,7 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
                             continue
                         try:
                             data = json.loads(line)
-                        except Exception as e:
+                        except Exception:
                             continue
 
                         if data["type"] == "token":
