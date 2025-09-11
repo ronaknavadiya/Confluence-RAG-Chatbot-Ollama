@@ -7,7 +7,7 @@ on:
 env:
   BACKEND_IMAGE: ${{ secrets.REGISTRY }}/confluence-rag-chatbot-backend
   FRONTEND_IMAGE: ${{ secrets.REGISTRY }}/confluence-rag-chatbot-frontend
-  TAGS: ${{ github.sha }}
+  TAGS: ${{ github.sha || github.run_id }}
 
 jobs:
   build-and-push:
@@ -28,7 +28,12 @@ jobs:
           registry: ${{ secrets.REGISTRY }}
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRy_TOKEN }}
-
+      
+      - name: Debug image tags
+        run: |
+          echo "BACKEND_IMAGE: ${{ env.BACKEND_IMAGE }}"
+          echo "TAG: ${{ env.TAG }}"
+          echo "Full tag: ${{ env.BACKEND_IMAGE }}:${{ env.TAG }}"
       -
         name: Build and push backend image
         uses: docker/build-push-action@v6
