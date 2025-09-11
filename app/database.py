@@ -1,4 +1,13 @@
-from sqlalchemy import create_engine, Column ,Integer, String, Text, JSON, ForeignKey, TIMESTAMP
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Text,
+    JSON,
+    ForeignKey,
+    TIMESTAMP,
+)
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -16,7 +25,9 @@ class Thread(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
-    messages = relationship("Message", back_populates="thread", cascade="all, delete-orphan")
+    messages = relationship(
+        "Message", back_populates="thread", cascade="all, delete-orphan"
+    )
 
 
 class Message(Base):
@@ -30,6 +41,6 @@ class Message(Base):
 
     thread = relationship("Thread", back_populates="messages")
 
+
 def init_db():
     Base.metadata.create_all(bind=engine)
-

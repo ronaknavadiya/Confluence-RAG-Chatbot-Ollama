@@ -5,7 +5,6 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from azure.storage.blob import BlobServiceClient
 
 from .config import ensure_dir, env
-import os
 
 
 #  Load confluence document
@@ -24,31 +23,35 @@ def load_confluence_documents():
     return loader.load()
 
 
-#  indexing 
+#  indexing
 def build_index(rebuild: bool = False):
 
     index_dir = ensure_dir(env("INDEX_DIR", "./data/index"))
     index_path = index_dir / "faiss_index"
 
-    # embeddings 
+    # embeddings
 
-    embeddings = HuggingFaceEmbeddings(model_name = env("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"))
+    embeddings = HuggingFaceEmbeddings(
+        model_name=env("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    )
 
     # if rebuild is not required and index exists load it for faster similarity search
     if not rebuild and index_path.exists():
-        return FAISS.load_local(str(index_path), embeddings, allow_dangerous_deserialization=True)
-    
+        return FAISS.load_local(
+            str(index_path), embeddings, allow_dangerous_deserialization=True
+        )
+
     docs = load_confluence_documents()
 
     # print("docs--------------------->" )
     # for doc in docs:
     #     print(doc)
 
-    # splitting of docs 
+    # splitting of docs
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=int(env("CHUNK_SIZE", 1200)),
         chunk_overlap=int(env("CHUNK_OVERLAP", 200)),
-        separators=["\n\n", "\n", ". ", ".", " "]
+        separators=["\n\n", "\n", ". ", ".", " "],
     )
 
     chunks = splitter.split_documents(docs)
@@ -76,16 +79,13 @@ def upload_index_to_azure(index_path):
     if not conn_str:
         print("Exiting... - connection string not defined")
         return
-    
+
     client = BlobServiceClient.from_connection_string(conn_str)
     container_client = client.get_container_client(container)
 
     container_client.upload_blob(
-        name="faiss_index",
-        data=open(index_path, "rb"),
-        overwrite=True
+        name="faiss_index", data=open(index_path, "rb"), overwrite=True
     )
-
 
 
 def download_index_from_azure(index_path):
@@ -93,7 +93,7 @@ def download_index_from_azure(index_path):
     container = env("AZURE_CONTAINER", "confluence-index")
     if not conn_str:
         return
-    
+
     client = BlobServiceClient.from_connection_string(conn_str)
     container_client = client.get_container_client(container)
     blob = container_client.get_blob_client("faiss_index")
@@ -101,5 +101,5 @@ def download_index_from_azure(index_path):
         with open(index_path, "wb") as f:
             f.write(blob.download_blob().readall())
 
-# build_index()
 
+# build_index()
