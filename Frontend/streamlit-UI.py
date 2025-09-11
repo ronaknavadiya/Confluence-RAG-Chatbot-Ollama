@@ -31,7 +31,8 @@ def fetch_threads():
     try:
         response = requests.get(API_URL_THREADS)
         return response.json() if response.status_code == 200 else []
-    except:
+    except Exception as e:
+        print(e)
         return []
 
 
@@ -41,7 +42,8 @@ def fetch_thread_messages(thread_id):
         if response.status_code == 200:
             return response.json()
         return []
-    except:
+    except Exception as e:
+        print(e)
         return []
 
 
@@ -121,7 +123,7 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
                             continue
                         try:
                             data = json.loads(line)
-                        except:
+                        except Exception as e:
                             continue
 
                         if data["type"] == "token":

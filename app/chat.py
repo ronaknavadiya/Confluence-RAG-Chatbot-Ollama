@@ -5,7 +5,7 @@ from .config import env
 from utills.rerank import re_rank
 
 SYSTEM_PROMPT = """
-        You are a helpful assistant that answers based on Confluence docs. 
+        You are a helpful assistant that answers based on Confluence docs.
         if confluence docs doesn't have context of asked query, say 'I don't know'
 """
 

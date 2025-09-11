@@ -5,7 +5,6 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from azure.storage.blob import BlobServiceClient
 
 from .config import ensure_dir, env
-import os
 
 
 #  Load confluence document
