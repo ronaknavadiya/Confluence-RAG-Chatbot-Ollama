@@ -1,0 +1,63 @@
+name: CD - build and push
+on: 
+  push: 
+    branches: 
+      - master
+
+env:
+  BACKEND_IMAGE: ${{ secrets.REGISTRY }}/confluence-rag-chatbot-backend
+  FRONTEND_IMAGE: ${{ secrets.REGISTRY }}/confluence-rag-chatbot-frontend
+  TAGS: ${{ github.sha }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - 
+        name: Checkout
+        uses: actions/checkout@v4
+
+      - 
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRy_TOKEN }}
+
+      -
+        name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ env.TAG }}
+            ${{ env.BACKEND_IMAGE }}:latest
+
+      -
+        name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.ui
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ env.TAG }}
+            ${{ env.FRONTEND_IMAGE }}:latest
+
+      -
+        name: Uploaded image metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: images
+          path: |
+            image_list.txt    
+          # storing list of pushed images for future usage
+    
+    
