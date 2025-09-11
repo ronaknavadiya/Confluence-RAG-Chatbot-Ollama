@@ -3,6 +3,7 @@ on:
   push: 
     branches: 
       - master
+  workflow_dispatch: 
 
 env:
   BACKEND_IMAGE: ${{ secrets.REGISTRY }}/confluence-rag-chatbot-backend
@@ -34,6 +35,7 @@ jobs:
           echo "BACKEND_IMAGE: ${{ env.BACKEND_IMAGE }}"
           echo "TAG: ${{ env.TAG }}"
           echo "Full tag: ${{ env.BACKEND_IMAGE }}:${{ env.TAG }}"
+          ls -la
       -
         name: Build and push backend image
         uses: docker/build-push-action@v6
