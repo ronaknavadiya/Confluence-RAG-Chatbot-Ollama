@@ -1,0 +1,36 @@
+name: CI
+
+on:
+    pull_request: 
+        branches: [master] 
+
+jobs:
+    lint-and-test:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup a python
+              uses: actions/setup-python@v4
+              with:
+                python-version: "3.11"
+
+            - name: Install dependencies
+              run: |
+                python -m pip Install --upgrade pip
+                pip install -r requirements.txt
+                pip install -r requirements-ui.txt || true
+
+            - name: Run linters
+              run: |
+                pip install black flake8
+                black --check .
+                flake8 .
+
+            # - name: Run tests
+            #   run: |
+            #     # run tests here 
+            #         # pip install pytests
+            #         # pytests -q || true
+  
