@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 def env(key: str, default: str | None = None) -> str | None:
     return os.getenv(key, default)
 
@@ -13,7 +14,7 @@ def ensure_dir(p: str | Path) -> Path:
 
     # parents= True will create parent directory if doesn't exist
     # exist_ok = True will not raise error even if file already exists
-    path.mkdir(parents=True, exist_ok=True)   
+    path.mkdir(parents=True, exist_ok=True)
     return path
 
 

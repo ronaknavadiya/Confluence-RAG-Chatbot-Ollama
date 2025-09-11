@@ -13,14 +13,16 @@ app = FastAPI(title="Confluence RAG Chatbot")
 # Init DB
 init_db()
 
+
 class ChatInput(BaseModel):
     question: str
-    top_k:int | None = None
+    top_k: int | None = None
     thread_id: int | None = None
+
 
 class ChatOutput(BaseModel):
     answer: str
-    citations : list
+    citations: list
     thread_id: int
 
 
@@ -39,8 +41,8 @@ def chat_endpoint(payload: ChatInput):
             thread = db.query(Thread).filter(Thread.id == payload.thread_id).first()
             if not thread:
                 raise HTTPException(status_code=404, detail="Thread not found")
-            
-        user_msg = Message(thread_id = thread.id, role="user", content=payload.question)
+
+        user_msg = Message(thread_id=thread.id, role="user", content=payload.question)
         db.add(user_msg)
         db.commit()
 
@@ -48,7 +50,7 @@ def chat_endpoint(payload: ChatInput):
             full_answer = ""
             citations = []
             for chunk in answer_question(payload.question, payload.top_k):
-                
+
                 if chunk["type"] == "token":
                     full_answer += chunk["content"]
                     # "\n" Separates each JSON message in the stream.
@@ -59,17 +61,18 @@ def chat_endpoint(payload: ChatInput):
                     citations = chunk["citations"]
                     yield json.dumps(chunk) + "\n"
 
-
             # save assistant msg after streaming finishes
-            assistant_msg = Message(thread_id=payload.thread_id, role="assistant", content=full_answer, citations=citations)
+            assistant_msg = Message(
+                thread_id=payload.thread_id,
+                role="assistant",
+                content=full_answer,
+                citations=citations,
+            )
             db.add(assistant_msg)
             db.commit()
 
             # yield final message with thread_id so frontend can capture it
-            final_info = {
-                "type": "thread_info",
-                "thread_id": payload.thread_id
-            }
+            final_info = {"type": "thread_info", "thread_id": payload.thread_id}
             yield json.dumps(final_info) + "\n"
 
         return StreamingResponse(generate(), media_type="application/x-ndjson")
@@ -78,16 +81,19 @@ def chat_endpoint(payload: ChatInput):
         db.close()
 
 
-
 @app.get("/threads")
 def list_threads():
     db = SessionLocal()
     try:
         threads = db.query(Thread).order_by(Thread.created_at.desc()).all()
-        return [{"id":t.id, "name":t.name, "created_at": t.created_at.isoformat()}  for t in threads]
+        return [
+            {"id": t.id, "name": t.name, "created_at": t.created_at.isoformat()}
+            for t in threads
+        ]
 
     finally:
         db.close()
+
 
 @app.get("/messages/{thread_id}")
 def extract_messages_from_thread_id(thread_id: int):
@@ -100,15 +106,16 @@ def extract_messages_from_thread_id(thread_id: int):
     finally:
         db.close()
 
+
 @app.delete("/delete-thread/{thread_id}")
-def delete_thread_based_on_thread_id(thread_id:int):
+def delete_thread_based_on_thread_id(thread_id: int):
     db = SessionLocal()
     try:
         thread = db.query(Thread).filter(Thread.id == thread_id).first()
         if not thread:
-            raise HTTPException(status_code=404, detail= "Thread not found")
-        
-        # delete all msg first 
+            raise HTTPException(status_code=404, detail="Thread not found")
+
+        # delete all msg first
         db.query(Message).filter(Message.thread_id == thread_id).delete()
         # delete thread form Thread table
         db.delete(thread)
@@ -121,6 +128,3 @@ def delete_thread_based_on_thread_id(thread_id:int):
 def rebuild_index_endpoint():
     build_index(rebuild=True)
     return {"status": "ok"}
-
-
-

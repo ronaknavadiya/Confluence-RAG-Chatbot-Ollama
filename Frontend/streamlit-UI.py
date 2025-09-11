@@ -8,7 +8,9 @@ import traceback
 API_URL_CHAT = os.getenv("CHAT_API_URL", "http://localhost:8000/chat")
 API_URL_THREADS = os.getenv("CHAT_API_URL_THREADS", "http://localhost:8000/threads")
 API_URL_MESSAGES = os.getenv("CHAT_API_URL_MESSAGES", "http://localhost:8000/messages")
-API_URL_DELETE_THREAD = os.getenv("CHAT_API_URL_DELETE_THREAD", "http://localhost:8000/delete-thread")
+API_URL_DELETE_THREAD = os.getenv(
+    "CHAT_API_URL_DELETE_THREAD", "http://localhost:8000/delete-thread"
+)
 
 # ------------------------  Streamlit UI ------------------------------ #
 st.set_page_config(page_title="Confluence RAG Chatbot", layout="wide")
@@ -24,12 +26,14 @@ if "messages" not in st.session_state:
 if "thread_id" not in st.session_state:
     st.session_state["thread_id"] = None
 
+
 def fetch_threads():
     try:
         response = requests.get(API_URL_THREADS)
         return response.json() if response.status_code == 200 else []
     except:
         return []
+
 
 def fetch_thread_messages(thread_id):
     try:
@@ -40,12 +44,13 @@ def fetch_thread_messages(thread_id):
     except:
         return []
 
+
 threads = fetch_threads()
 st.sidebar.subheader("Threads")
 
 for thread in threads:
     col1, col2 = st.sidebar.columns([4, 1])
-    
+
     with col1:
         if col1.button(thread["name"], key=f"select_{thread['id']}"):
             st.session_state["thread_id"] = thread["id"]
@@ -63,7 +68,9 @@ for thread in threads:
                     st.toast(f"Deleted thread **{thread['name']}**", icon="🗑️")
                     st.rerun()
                 else:
-                    st.toast(f"❌ Error deleting {thread['name']}: {response.text}", icon="⚠️")
+                    st.toast(
+                        f"❌ Error deleting {thread['name']}: {response.text}", icon="⚠️"
+                    )
             except Exception:
                 st.error("Failed to delete thread:\n" + traceback.format_exc())
 
@@ -82,7 +89,9 @@ for msg in st.session_state["messages"]:
         if msg.get("citations"):
             with st.expander("Citations"):
                 for i, citation in enumerate(msg["citations"], 1):
-                    st.markdown(f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}")
+                    st.markdown(
+                        f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}"
+                    )
 
 # --------------------- Chat Input & Streaming ----------------------- #
 if user_input := st.chat_input("Ask a question about your Confluence docs..."):
@@ -92,7 +101,7 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
     payload = {
         "question": user_input,
         "top_k": top_k,
-        "thread_id": st.session_state["thread_id"]
+        "thread_id": st.session_state["thread_id"],
     }
 
     try:
@@ -123,17 +132,21 @@ if user_input := st.chat_input("Ask a question about your Confluence docs..."):
                             if citations:
                                 with citations_placeholder.expander("Citations"):
                                     for i, citation in enumerate(citations, 1):
-                                        st.markdown(f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}")
+                                        st.markdown(
+                                            f"**[{i}] {citation.get('title','Untitled')}** - {citation.get('source','')}"
+                                        )
                                 citations_rendered = True
                         elif data["type"] == "thread_info":
                             st.session_state["thread_id"] = data["thread_id"]
 
                     msg_placeholder.markdown(full_answer)
 
-                st.session_state["messages"].append({
-                    "role": "assistant",
-                    "content": full_answer,
-                    "citations": citations
-                })
+                st.session_state["messages"].append(
+                    {
+                        "role": "assistant",
+                        "content": full_answer,
+                        "citations": citations,
+                    }
+                )
     except Exception:
         st.error("Request failed:\n" + traceback.format_exc())

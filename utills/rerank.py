@@ -1,5 +1,6 @@
 try:
     from sentence_transformers import CrossEncoder
+
     _HAS_CROSS = True
 except Exception:
     _HAS_CROSS = False

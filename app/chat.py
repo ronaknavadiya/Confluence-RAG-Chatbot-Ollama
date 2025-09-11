@@ -9,6 +9,7 @@ SYSTEM_PROMPT = """
         if confluence docs doesn't have context of asked query, say 'I don't know'
 """
 
+
 def format_context(docs):
     output = []
 
@@ -22,16 +23,19 @@ def format_context(docs):
         output.append(header + "\n" + doc.page_content.strip())
     return "\n\n".join(output)
 
-def answer_question(question: str, k:int = None) -> dict:
+
+def answer_question(question: str, k: int = None) -> dict:
     k = k or int(env("TOP_K", 3))
 
     vector_store = get_vectorStore()
-    retriever = vector_store.as_retriever(search_type="mmr", search_kwargs={"k": max(k*2, 8)})
+    retriever = vector_store.as_retriever(
+        search_type="mmr", search_kwargs={"k": max(k * 2, 8)}
+    )
 
     #  get relevant docs
 
     raw_docs = retriever.get_relevant_documents(question)
-    
+
     # re rank docs
     top_docs = re_rank(question, raw_docs, top_k=k)
 
@@ -56,9 +60,9 @@ def answer_question(question: str, k:int = None) -> dict:
         def token_generator():
             full_answer = ""
             for chunk in llm.stream(msgs):
-                token = getattr(chunk,"content", "")
+                token = getattr(chunk, "content", "")
                 full_answer += token
-                yield {"type":"token", "content":token}
+                yield {"type": "token", "content": token}
             # When streaming completes, also yield a marker with citations
             citations = [d.metadata for d in top_docs]
             yield {"type": "citations", "citations": citations}
