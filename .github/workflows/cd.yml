@@ -6,8 +6,8 @@ on:
   workflow_dispatch: 
 
 env:
-  BACKEND_IMAGE: ${{ secrets.REGISTRY }}/confluence-rag-chatbot-backend
-  FRONTEND_IMAGE: ${{ secrets.REGISTRY }}/confluence-rag-chatbot-frontend
+  BACKEND_IMAGE: ${{ secrets.REGISTRY_USER }}/confluence-rag-chatbot-backend
+  FRONTEND_IMAGE: ${{ secrets.REGISTRY_USER }}/confluence-rag-chatbot-frontend
   TAG: ${{ github.sha || github.run_id }}
 
 jobs:
