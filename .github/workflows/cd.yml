@@ -3,6 +3,7 @@ on:
   push: 
     branches: 
       - master
+  workflow_dispatch: 
 
 env:
   BACKEND_IMAGE: ${{ secrets.REGISTRY }}/confluence-rag-chatbot-backend
