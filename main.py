@@ -1,6 +1,5 @@
 import uvicorn
 import argparse
-from app.api import app
 from app.chat import answer_question
 from app.config import env
 from app.indexer import build_index
