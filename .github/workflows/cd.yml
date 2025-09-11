@@ -28,7 +28,7 @@ jobs:
         with:
           registry: ${{ secrets.REGISTRY }}
           username: ${{ secrets.REGISTRY_USER }}
-          password: ${{ secrets.REGISTRy_TOKEN }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
       
       - name: Debug image tags
         run: |
