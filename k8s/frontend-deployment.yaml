@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: confluence-frontend
+  labels:
+    app: confluence-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: confluence-frontend
+  template:
+    metadata:
+      labels:
+        app: confluence-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: confluence-rag-chatbot-frontend
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8501
+        env: 
+          - name: CHAT_API_URL
+            value: "http://confluence-backend:8000/chat"
+          - name: CHAT_API_URL_THREADS
+            value: "http://confluence-backend:8000/threads"
+        
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8501
+          initialDelaySeconds: 10
+          periodSeconds: 15
+
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8501
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+        resources:
+            requests:
+              cpu: "200m"
+              memory: "556Mi"
+            limits:
+              cpu: "500"
+              memory: "512Mi"
+
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: confluence-frontend
+spec:
+  selector:
+    app: confluence-frontend
+  ports:
+  - port: 8501
+    targetPort: 8501
+  type: ClusterIP

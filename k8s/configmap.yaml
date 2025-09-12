@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: confluence-config
+data:
+  INDEX_DIR: "/app/data/index"
+  TOP_K: "3"
