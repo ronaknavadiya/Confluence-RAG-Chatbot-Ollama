@@ -128,3 +128,7 @@ def delete_thread_based_on_thread_id(thread_id: int):
 def rebuild_index_endpoint():
     build_index(rebuild=True)
     return {"status": "ok"}
+
+@app.get("/health")
+def health():
+    return {"status":"ok"}
