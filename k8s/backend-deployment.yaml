@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: confluence-rag-chatbot-backend
+          image: confluence-rag-chatbot-backend:local
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000

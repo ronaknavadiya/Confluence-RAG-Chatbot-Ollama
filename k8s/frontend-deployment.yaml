@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: confluence-rag-chatbot-frontend
+        image: confluence-rag-chatbot-frontend:local
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 8501
@@ -43,7 +43,7 @@ spec:
         resources:
             requests:
               cpu: "200m"
-              memory: "556Mi"
+              memory: "256Mi"
             limits:
               cpu: "500"
               memory: "512Mi"
