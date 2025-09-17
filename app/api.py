@@ -6,6 +6,7 @@ from .indexer import build_index
 from .database import SessionLocal, Thread, Message, init_db
 from datetime import datetime
 import json
+import traceback
 
 # Init App
 app = FastAPI(title="Confluence RAG Chatbot")
@@ -77,8 +78,18 @@ def chat_endpoint(payload: ChatInput):
 
         return StreamingResponse(generate(), media_type="application/x-ndjson")
 
+    except Exception:
+        print("Error during chat API call-->", traceback.format_exc() )
     finally:
         db.close()
+
+# @app.post("/swaggerUI-chat", response_model=ChatOutput)
+# def chat_sync(payload: ChatInput):
+#     output = answer_question(payload.question, payload.top_k)
+#     # build final answer
+#     final_answer = output["answer"]
+#     citations = output["citations"]
+#     return ChatOutput(answer=final_answer, citations=citations, thread_id=payload.thread_id)
 
 
 @app.get("/threads")
