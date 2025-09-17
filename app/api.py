@@ -79,9 +79,10 @@ def chat_endpoint(payload: ChatInput):
         return StreamingResponse(generate(), media_type="application/x-ndjson")
 
     except Exception:
-        print("Error during chat API call-->", traceback.format_exc() )
+        print("Error during chat API call-->", traceback.format_exc())
     finally:
         db.close()
+
 
 # @app.post("/swaggerUI-chat", response_model=ChatOutput)
 # def chat_sync(payload: ChatInput):
@@ -140,6 +141,7 @@ def rebuild_index_endpoint():
     build_index(rebuild=True)
     return {"status": "ok"}
 
+
 @app.get("/health")
 def health():
-    return {"status":"ok"}
+    return {"status": "ok"}
