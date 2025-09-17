@@ -5,7 +5,7 @@ metadata:
   labels:
     app: confluence-frontend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: confluence-frontend
@@ -25,6 +25,10 @@ spec:
             value: "http://confluence-backend:8000/chat"
           - name: CHAT_API_URL_THREADS
             value: "http://confluence-backend:8000/threads"
+          - name: CHAT_API_URL_MESSAGES
+            value: "http://confluence-backend:8000/messages"
+          - name: CHAT_API_URL_DELETE_THREAD
+            value: "http://confluence-backend:8000/delete-thread"
         
         livenessProbe:
           httpGet:

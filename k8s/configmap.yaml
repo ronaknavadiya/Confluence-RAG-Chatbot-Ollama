@@ -5,3 +5,4 @@ metadata:
 data:
   INDEX_DIR: "/app/data/index"
   TOP_K: "3"
+  # OLLAMA_BASE_URL: "http://ollama:11434"

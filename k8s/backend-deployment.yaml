@@ -5,7 +5,7 @@ metadata:
   labels:
     app: confluence-backend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: confluence-backend
@@ -25,25 +25,37 @@ spec:
                 name: confluence-config
             - secretRef:
                 name: confluence-secrets
+          # startupProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 8000
+          #   failureThreshold: 30      # allow up to 30 attempts
+          #   periodSeconds: 10         # 30 * 10s = 5 minutes max startup
+
           livenessProbe:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 10
-            periodSeconds: 15
+            initialDelaySeconds: 10   # wait before first probe
+            periodSeconds: 10         # check every 10s
+            timeoutSeconds: 5
+            failureThreshold: 5       # retry 5 times before restarting
+
           readinessProbe:
             httpGet:
               path: /health
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10
-          resources:
-            requests:
-              cpu: "250m"
-              memory: "512Mi"
-            limits:
-              cpu: "1"
-              memory: "1Gi"
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # resources:
+          #   requests:
+          #     cpu: "250m"
+          #     memory: "512Mi"
+          #   limits:
+          #     cpu: "1"
+          #     memory: "1Gi"
 
 ---
 apiVersion: v1
@@ -54,6 +66,7 @@ spec:
   selector:
     app: confluence-backend
   ports:
-    - port: 8000
+    - protocol: TCP
+      port: 8000
       targetPort: 8000
   type: ClusterIP
