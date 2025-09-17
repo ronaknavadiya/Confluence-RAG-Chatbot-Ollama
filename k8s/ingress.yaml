@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: confluence-ingress
+  labels:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service: 
+                name: confluence-backend    
+                port: 
+                  number: 8000
+
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: confluence-frontend
+                port:
+                  number: 8501

@@ -13,7 +13,9 @@ def serve():
         build_index(rebuild=True)
         print("Ingestion complete. Starting API server...")
 
-    uvicorn.run("app.api:app", host="0.0.0.0", port=8000, reload=True)
+    # nOTE - Enable this only when you do development
+    # uvicorn.run("app.api:app", host="0.0.0.0", port=8000, reload=True, log_level="debug")
+    uvicorn.run("app.api:app", host="0.0.0.0", port=8000, log_level="debug")
 
 
 def main():
