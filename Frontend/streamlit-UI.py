@@ -3,6 +3,9 @@ import requests
 import os
 import json
 import traceback
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 # --------------------  Global variables ---------------------------- #
 API_URL_CHAT = os.getenv("CHAT_API_URL", "http://localhost:8000/chat")
